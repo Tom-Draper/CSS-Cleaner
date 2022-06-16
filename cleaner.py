@@ -34,20 +34,23 @@ def run(path):
     for file_path in files:
         with open(file_path, 'r') as f:
             html = f.read()
+            # Cover classes
             for classes in re.findall(r'class="(.*)"', html):
                 for _class in classes.split(' '):
                     try:
                         styles.remove('.' + _class)
                     except:
                         pass
-                    
+            
+            # Cover ids
             for ids in re.findall(r'id="(.*)"', html):
                 for _id in ids.split(' '):
                     try:
                         styles.remove('#' + _id)
                     except:
                         pass
-                    
+    
+    # Styles remaining in set are not found in any html file
     print('To remove', len(styles), 'styles:', styles)
 
 def get_path():
