@@ -72,7 +72,6 @@ def filter_js_used(styles):
                 if style.replace('.', '').replace('#', '') in js:
                     to_remove.add(style)
     styles = styles - to_remove
-    # print('Ignoring styles mentioned in JavaScript', to_remove)
 
 
 def remove_styles(css, styles):
@@ -95,7 +94,6 @@ def remove_unused_styles(css):
     # Styles remaining in set are not used any html or js file
     # EXCEPTION: Inserting a class using js without explicitly stating the class
     #            name within the js file
-    print('To remove', len(styles), 'styles:', styles)
     css = remove_styles(css, styles)
     return css
 
