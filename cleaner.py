@@ -23,26 +23,24 @@ def extract_css_styles(css):
     styles = set()
     for style_tag in re.findall(r'\n([^:\n@%]*)\{', css):
         styles = styles.union(set(style_tag.strip().split(' ')))
+
+    styles.remove('*')
+
     print(len(styles), 'styles found')
+
     return styles
 
 
 def filter_used_classes(styles, html):
     for classes in re.findall(r'class="(.*)"', html):
         for _class in classes.split(' '):
-            try:
-                styles.remove('.' + _class)
-            except:
-                pass
+            styles.discard('.' + _class)
 
 
 def filter_used_ids(styles, html):
     for ids in re.findall(r'id="(.*)"', html):
         for _id in ids.split(' '):
-            try:
-                styles.remove('#' + _id)
-            except:
-                pass
+            styles.discard('#' + _id)
 
 
 def filter_used_tags(styles, html):
@@ -74,15 +72,15 @@ def filter_js_used(styles):
                 if style.replace('.', '').replace('#', '') in js:
                     to_remove.add(style)
     styles = styles - to_remove
-    print('Ignoring styles mentioned in JavaScript', to_remove)
+    # print('Ignoring styles mentioned in JavaScript', to_remove)
 
 
 def remove_styles(css, styles):
     for style in styles:
-        css = re.sub(r'\n\s*' + style.replace('*', '\*') + r'\s*{[^}]*}', '', css)
-        css = re.sub(style.replace('*', '\*') + r',\s*\n', '', css)
-        print(f'Removed {style}')
-        
+        print(f'Removing unused style tag: {style}')
+        css = re.sub(r'\n\s*' + style + r'\s*{[^}]*}', '', css)
+        css = re.sub(style + r',\s*\n', '', css)
+
     return css
 
 
@@ -99,27 +97,55 @@ def remove_unused_styles(css):
     #            name within the js file
     print('To remove', len(styles), 'styles:', styles)
     css = remove_styles(css, styles)
-    
+    return css
+
+
+def merge_duplicate_style_tags(css):
     return css
 
 
 def remove_duplicate_styles(css):
-    pass
-
-
-def merge_duplicate_style_tags(css):
-    pass
+    contexts = [set()]
+    
+    lines = css.split('\n')
+    for i in range(len(lines)-1, -1, -1):
+        for _ in range(lines[i].count('}')):
+            contexts.append(set())
+        for _ in range(lines[i].count('{')):
+            contexts.pop()
+            
+        style = re.match(r'\-*([^:]*):', lines[i])
+        if style is not None:
+            style = style.group(0)
+            if '@' not in style:
+                if style in contexts[-1]:
+                    # Style already used in this current context
+                    print('Removing duplicate style:', style, 'at line', i)
+                    lines.pop(i)
+                else:
+                    contexts[-1].add(style)
+    
+    css = '\n'.join(lines)
+    
+    return css
 
 
 def run(path):
     with open(path, 'r') as f:
         css = f.read()
+        
+    original = css
 
     css = remove_unused_styles(css)
-    # Remove any overridden styles for each class
-    css = remove_duplicate_styles(css)
     # Merge duplicate style tags
     css = merge_duplicate_style_tags(css)
+    # Remove any overridden styles for each class
+    css = remove_duplicate_styles(css)
+    
+    original_len = len(original.split('\n'))
+    css_len = len(css.split('\n'))
+    print(f'{original_len} lines -> {css_len} lines')
+    print(f"Reduced file size by {round((len(original)-len(css)) / len(original) * 100, 2)}%")
 
 
 def get_path():
